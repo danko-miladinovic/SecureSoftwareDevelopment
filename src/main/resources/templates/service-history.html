@@ -45,7 +45,7 @@
     </div>
     <script>
         const historyForm = document.getElementById('history-search');
-        function renderHistory(services, view) {
+        function renderHistory(services, criteria) {
             const columns = [
                 {title: 'Service ID', value: service => service.serviceId},
                 {title: 'Car model', value: service => service.carModel},
@@ -54,11 +54,11 @@
                     ? service.totalPrice.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})
                     : service.totalPrice}
             ];
-            if (view['performedServices.name']) {
+            if (criteria.showPerformedServices) {
                 columns.push({title: 'Performed services', value: service =>
                     (service.performedServices || []).map(item => item.name).filter(Boolean).join('; ')});
             }
-            if (view['performedServices.usedParts']) {
+            if (criteria.showUsedParts) {
                 columns.push({title: 'Used parts', value: service =>
                     (service.performedServices || []).map(item =>
                         (item.usedParts || []).map(part => part.name).filter(Boolean).join(', ')
@@ -88,20 +88,18 @@
         }
         historyForm.addEventListener('submit', async function (event) {
             event.preventDefault();
-            const filters = {};
-            const fields = {
-                'car-model': 'carModel',
-                'service-name': 'performedServices.name',
-                'part-name': 'performedServices.usedParts.name',
-                'technician': 'technician'
-            };
-            Object.keys(fields).forEach(function (id) {
+            function textValue(id) {
                 const value = document.getElementById(id).value.trim();
-                if (value) filters[fields[id]] = value;
-            });
-            const view = {};
-            if (document.getElementById('show-services').checked) view['performedServices.name'] = 1;
-            if (document.getElementById('show-parts').checked) view['performedServices.usedParts'] = 1;
+                return value ? value : null;
+            }
+            const criteria = {
+                carModel: textValue('car-model'),
+                serviceName: textValue('service-name'),
+                partName: textValue('part-name'),
+                technician: textValue('technician'),
+                showPerformedServices: document.getElementById('show-services').checked,
+                showUsedParts: document.getElementById('show-parts').checked
+            };
             const status = document.getElementById('history-status');
             const results = document.getElementById('history-results');
             status.textContent = 'Searching...';
@@ -110,7 +108,7 @@
                 const response = await fetch('/api/my/service-history/search', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({filters: filters, view: view})
+                    body: JSON.stringify(criteria)
                 });
                 if (response.redirected) {
                     window.location.assign(response.url);
@@ -119,7 +117,7 @@
                 if (!response.ok) throw new Error('Search failed (HTTP ' + response.status + ').');
                 const services = await response.json();
                 status.textContent = services.length + ' completed service(s) found.';
-                renderHistory(services, view);
+                renderHistory(services, criteria);
             } catch (error) {
                 status.textContent = error.message;
             }

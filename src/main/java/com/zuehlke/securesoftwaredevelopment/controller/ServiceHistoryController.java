@@ -27,6 +27,6 @@ public class ServiceHistoryController {
     public List<Document> search(@RequestBody ServiceHistorySearchRequest request) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         int authenticatedCustomerId = userRepository.findIdByUsername(authentication.getName());
-        return serviceHistoryRepository.search(authenticatedCustomerId, request.getFilters(), request.getView());
+        return serviceHistoryRepository.search(authenticatedCustomerId, request);
     }
 }

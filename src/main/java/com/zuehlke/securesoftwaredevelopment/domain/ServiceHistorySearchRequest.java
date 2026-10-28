@@ -1,24 +1,53 @@
 package com.zuehlke.securesoftwaredevelopment.domain;
 
-import java.util.Map;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
-public class ServiceHistorySearchRequest {
-    private Map<String, Object> filters;
-    private Map<String, Object> view;
+public final class ServiceHistorySearchRequest {
+    private final String carModel;
+    private final String serviceName;
+    private final String partName;
+    private final String technician;
+    private final boolean showPerformedServices;
+    private final boolean showUsedParts;
 
-    public Map<String, Object> getFilters() {
-        return filters;
+    @JsonCreator
+    public ServiceHistorySearchRequest(@JsonProperty("carModel") String carModel,
+                                       @JsonProperty("serviceName") String serviceName,
+                                       @JsonProperty("partName") String partName,
+                                       @JsonProperty("technician") String technician,
+                                       @JsonProperty("showPerformedServices") boolean showPerformedServices,
+                                       @JsonProperty("showUsedParts") boolean showUsedParts) {
+        this.carModel = carModel;
+        this.serviceName = serviceName;
+        this.partName = partName;
+        this.technician = technician;
+        this.showPerformedServices = showPerformedServices;
+        this.showUsedParts = showUsedParts;
     }
 
-    public void setFilters(Map<String, Object> filters) {
-        this.filters = filters;
+    public String carModel() {
+        return carModel;
     }
 
-    public Map<String, Object> getView() {
-        return view;
+    public String serviceName() {
+        return serviceName;
     }
 
-    public void setView(Map<String, Object> view) {
-        this.view = view;
+    public String partName() {
+        return partName;
     }
+
+    public String technician() {
+        return technician;
+    }
+
+    public boolean showPerformedServices() {
+        return showPerformedServices;
+    }
+
+    public boolean showUsedParts() {
+        return showUsedParts;
+    }
+
 }
