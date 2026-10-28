@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout" layout:decorate="~{layout}">
+<head>
+    <meta charset="UTF-8">
+    <title>Service history</title>
+</head>
+<body>
+<div layout:fragment="content">
+    <h1>Completed service history</h1>
+    <form id="history-search">
+        <div class="form-group">
+            <label for="car-model">Car model</label>
+            <input id="car-model" class="form-control" placeholder="Ford Focus">
+        </div>
+        <div class="form-group">
+            <label for="service-name">Performed service</label>
+            <input id="service-name" class="form-control" placeholder="Oil change">
+        </div>
+        <div class="form-group">
+            <label for="part-name">Used part</label>
+            <input id="part-name" class="form-control" placeholder="Oil filter">
+        </div>
+        <div class="form-group">
+            <label for="technician">Technician</label>
+            <input id="technician" class="form-control" placeholder="Marko">
+        </div>
+        <div class="form-check">
+            <input id="show-services" type="checkbox" class="form-check-input" checked>
+            <label for="show-services" class="form-check-label">Show performed services</label>
+        </div>
+        <div class="form-check">
+            <input id="show-parts" type="checkbox" class="form-check-input" checked>
+            <label for="show-parts" class="form-check-label">Show used parts</label>
+        </div>
+        <button type="submit" class="btn btn-primary mt-3">Search</button>
+    </form>
+    <p id="history-status" class="mt-3" role="status" aria-live="polite"></p>
+    <div class="table-responsive" id="history-results" hidden>
+        <table class="table table-striped table-bordered">
+            <caption class="sr-only">Completed service history results</caption>
+            <thead class="thead-light"><tr id="history-columns"></tr></thead>
+            <tbody id="history-rows"></tbody>
+        </table>
+    </div>
+    <script>
+        const historyForm = document.getElementById('history-search');
+        function renderHistory(services, view) {
+            const columns = [
+                {title: 'Service ID', value: service => service.serviceId},
+                {title: 'Car model', value: service => service.carModel},
+                {title: 'Completed on', value: service => service.completedAt},
+                {title: 'Total price', value: service => typeof service.totalPrice === 'number'
+                    ? service.totalPrice.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})
+                    : service.totalPrice}
+            ];
+            if (view['performedServices.name']) {
+                columns.push({title: 'Performed services', value: service =>
+                    (service.performedServices || []).map(item => item.name).filter(Boolean).join('; ')});
+            }
+            if (view['performedServices.usedParts']) {
+                columns.push({title: 'Used parts', value: service =>
+                    (service.performedServices || []).map(item =>
+                        (item.usedParts || []).map(part => part.name).filter(Boolean).join(', ')
+                    ).filter(Boolean).join('; ')});
+            }
+            const header = document.getElementById('history-columns');
+            const rows = document.getElementById('history-rows');
+            header.textContent = '';
+            rows.textContent = '';
+            columns.forEach(function (column) {
+                const cell = document.createElement('th');
+                cell.scope = 'col';
+                cell.textContent = column.title;
+                header.appendChild(cell);
+            });
+            services.forEach(function (service) {
+                const row = document.createElement('tr');
+                columns.forEach(function (column) {
+                    const cell = document.createElement('td');
+                    const value = column.value(service);
+                    cell.textContent = value === undefined || value === null || value === '' ? '—' : value;
+                    row.appendChild(cell);
+                });
+                rows.appendChild(row);
+            });
+            document.getElementById('history-results').hidden = services.length === 0;
+        }
+        historyForm.addEventListener('submit', async function (event) {
+            event.preventDefault();
+            const filters = {};
+            const fields = {
+                'car-model': 'carModel',
+                'service-name': 'performedServices.name',
+                'part-name': 'performedServices.usedParts.name',
+                'technician': 'technician'
+            };
+            Object.keys(fields).forEach(function (id) {
+                const value = document.getElementById(id).value.trim();
+                if (value) filters[fields[id]] = value;
+            });
+            const view = {};
+            if (document.getElementById('show-services').checked) view['performedServices.name'] = 1;
+            if (document.getElementById('show-parts').checked) view['performedServices.usedParts'] = 1;
+            const status = document.getElementById('history-status');
+            const results = document.getElementById('history-results');
+            status.textContent = 'Searching...';
+            results.hidden = true;
+            try {
+                const response = await fetch('/api/my/service-history/search', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({filters: filters, view: view})
+                });
+                if (response.redirected) {
+                    window.location.assign(response.url);
+                    return;
+                }
+                if (!response.ok) throw new Error('Search failed (HTTP ' + response.status + ').');
+                const services = await response.json();
+                status.textContent = services.length + ' completed service(s) found.';
+                renderHistory(services, view);
+            } catch (error) {
+                status.textContent = error.message;
+            }
+        });
+        historyForm.dispatchEvent(new Event('submit', {cancelable: true}));
+    </script>
+</div>
+</body>
+</html>

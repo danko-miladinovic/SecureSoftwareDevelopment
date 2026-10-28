@@ -8,6 +8,7 @@ import org.springframework.stereotype.Component;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Component
 public class ServiceHistoryData implements CommandLineRunner {
@@ -63,6 +64,8 @@ public class ServiceHistoryData implements CommandLineRunner {
     }
 
     private Document performed(String name, List<String> usedParts) {
-        return new Document("name", name).append("usedParts", usedParts);
+        return new Document("name", name).append("usedParts", usedParts.stream()
+                .map(part -> new Document("name", part))
+                .collect(Collectors.toList()));
     }
 }

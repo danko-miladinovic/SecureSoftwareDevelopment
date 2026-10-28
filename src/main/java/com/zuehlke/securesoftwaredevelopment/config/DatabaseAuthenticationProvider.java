@@ -1,6 +1,5 @@
 package com.zuehlke.securesoftwaredevelopment.config;
 
-import com.zuehlke.securesoftwaredevelopment.repository.HashedUserRepository;
 import com.zuehlke.securesoftwaredevelopment.repository.UserRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

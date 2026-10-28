@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout" layout:decorate="~{layout}">
+<head>
+    <meta charset="UTF-8">
+    <title>Create service</title>
+</head>
+<body>
+<div layout:fragment="content">
+    <h1>Create service</h1>
+    <form id="create-service">
+        <div class="form-group">
+            <label for="car-model">Car model</label>
+            <input id="car-model" class="form-control" placeholder="Ford Focus" maxlength="100" required>
+        </div>
+        <div class="form-group">
+            <label for="technician">Technician</label>
+            <input id="technician" class="form-control" placeholder="Marko" maxlength="100" required>
+        </div>
+        <div class="form-group">
+            <label for="total-price">Total price</label>
+            <input id="total-price" type="number" class="form-control" placeholder="320.00" min="0" step="0.01" required>
+        </div>
+        <fieldset class="mt-3">
+            <legend class="h5">Performed services</legend>
+            <div id="performed-services"></div>
+            <button type="button" id="add-performed-service" class="btn btn-outline-secondary btn-sm">Add performed service</button>
+        </fieldset>
+        <button type="submit" class="btn btn-primary mt-3">Create service</button>
+    </form>
+    <p id="create-status" class="mt-3" role="status" aria-live="polite"></p>
+    <a th:href="@{/my/service-history}">View service history</a>
+    <script>
+        const createForm = document.getElementById('create-service');
+        const performedServices = document.getElementById('performed-services');
+        let performedServiceCount = 0;
+        function addPerformedService() {
+            performedServiceCount++;
+            const row = document.createElement('div');
+            row.className = 'form-row align-items-end mb-2 performed-service';
+
+            const nameGroup = document.createElement('div');
+            nameGroup.className = 'col-md-5';
+            const nameLabel = document.createElement('label');
+            nameLabel.htmlFor = 'service-name-' + performedServiceCount;
+            nameLabel.textContent = 'Service';
+            const nameInput = document.createElement('input');
+            nameInput.id = nameLabel.htmlFor;
+            nameInput.className = 'form-control service-name';
+            nameInput.placeholder = 'Oil change';
+            nameInput.maxLength = 100;
+            nameInput.required = true;
+            nameGroup.append(nameLabel, nameInput);
+
+            const partsGroup = document.createElement('div');
+            partsGroup.className = 'col-md-5';
+            const partsLabel = document.createElement('label');
+            partsLabel.htmlFor = 'used-parts-' + performedServiceCount;
+            partsLabel.textContent = 'Used parts (comma-separated)';
+            const partsInput = document.createElement('input');
+            partsInput.id = partsLabel.htmlFor;
+            partsInput.className = 'form-control used-parts';
+            partsInput.placeholder = 'Oil filter, 5W-30 oil';
+            partsGroup.append(partsLabel, partsInput);
+
+            const removeGroup = document.createElement('div');
+            removeGroup.className = 'col-md-2';
+            const removeButton = document.createElement('button');
+            removeButton.type = 'button';
+            removeButton.className = 'btn btn-outline-danger btn-block';
+            removeButton.textContent = 'Remove';
+            removeButton.addEventListener('click', function () {
+                if (performedServices.children.length > 1) row.remove();
+            });
+            removeGroup.appendChild(removeButton);
+
+            row.append(nameGroup, partsGroup, removeGroup);
+            performedServices.appendChild(row);
+        }
+        document.getElementById('add-performed-service').addEventListener('click', addPerformedService);
+        addPerformedService();
+
+        createForm.addEventListener('submit', async function (event) {
+            event.preventDefault();
+            const service = {
+                carModel: document.getElementById('car-model').value.trim(),
+                technician: document.getElementById('technician').value.trim(),
+                totalPrice: Number(document.getElementById('total-price').value),
+                performedServices: Array.from(performedServices.querySelectorAll('.performed-service')).map(function (row) {
+                    return {
+                        name: row.querySelector('.service-name').value.trim(),
+                        usedParts: row.querySelector('.used-parts').value.split(',')
+                            .map(function (part) { return part.trim(); })
+                            .filter(Boolean)
+                    };
+                })
+            };
+            const status = document.getElementById('create-status');
+            status.textContent = 'Saving...';
+            try {
+                const response = await fetch('/api/my/services', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(service)
+                });
+                if (response.redirected) {
+                    window.location.assign(response.url);
+                    return;
+                }
+                if (!response.ok) throw new Error('Could not create service (HTTP ' + response.status + ').');
+                const created = await response.json();
+                status.textContent = 'Service #' + created.serviceId + ' created.';
+                createForm.reset();
+                performedServices.textContent = '';
+                addPerformedService();
+            } catch (error) {
+                status.textContent = error.message;
+            }
+        });
+    </script>
+</div>
+</body>
+</html>
